@@ -1,13 +1,17 @@
 import os
 import requests
 import base64
+from dotenv import load_dotenv  # Make sure python-dotenv is installed
+
+# Load environment variables from .env file
+load_dotenv()
 
 # GitHub repository details
 OWNER = "Zephyrus2822"
 REPO = "testrepo"
 BRANCH = "main"
 
-GITHUB_TOKEN = "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"
+GITHUB_TOKEN = os.getenv("GITHUB_TOKEN")
 
 BASE_URL = f"https://api.github.com/repos/{OWNER}/{REPO}/contents/"
 HEADERS = {"Authorization": f"Bearer {GITHUB_TOKEN}"} if GITHUB_TOKEN else {}
