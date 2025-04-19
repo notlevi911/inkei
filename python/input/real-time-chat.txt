@@ -1,0 +1,1 @@
+"It would be great to have a chat feature so people in the same team can talk without needing Slack or something external. Think Discord-lite — just rooms, names, and real-time messages. Ideally, it should persist messages so they can pick up where they left off."
