@@ -1,0 +1,1 @@
+"We want users to be able to log in and sign up using their email and password. Eventually, we’d like to add Google and GitHub login too, but for now just basic auth is fine. Security is important — maybe hash the passwords? Also, we’ll need a way to keep them logged in across sessions."
