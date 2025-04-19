@@ -4,7 +4,7 @@ import base64
 from dotenv import load_dotenv  # Make sure python-dotenv is installed
 
 # Load environment variables from .env file
-load_dotenv()
+dotenv.load_dotenv()
 
 # GitHub repository details
 OWNER = "Zephyrus2822"

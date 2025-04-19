@@ -5,111 +5,90 @@ import Button from './button';
 const Navbar = ({ className }) => {
   const [scrolled, setScrolled] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [user, setUser] = useState(null);
 
   useEffect(() => {
     const handleScroll = () => {
-      const isScrolled = window.scrollY > 10;
-      if (isScrolled !== scrolled) {
-        setScrolled(isScrolled);
-      }
+      setScrolled(window.scrollY > 10);
     };
-
     window.addEventListener('scroll', handleScroll);
-    return () => {
-      window.removeEventListener('scroll', handleScroll);
-    };
-  }, [scrolled]);
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
 
-  const toggleMobileMenu = () => {
-    setMobileMenuOpen(!mobileMenuOpen);
+  useEffect(() => {
+    const storedUser = localStorage.getItem('user');
+    if (storedUser) {
+      setUser(JSON.parse(storedUser));
+    }
+  }, []);
+
+  const toggleMobileMenu = () => setMobileMenuOpen(!mobileMenuOpen);
+
+  const handleLogout = () => {
+    localStorage.removeItem('user');
+    setUser(null);
   };
 
   return (
     <nav
       className={cn(
-        "fixed top-0 left-0 right-0 z-50 transition-all duration-300",
-        scrolled 
-          ? "bg-white/90 backdrop-blur-md py-3 shadow-lg" 
-          : "bg-transparent py-5",
+        'fixed top-0 left-0 right-0 z-50 transition-all duration-300',
+        'bg-white/30 backdrop-blur-xl border-b border-white/20 shadow-md',
         className
       )}
     >
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex justify-between items-center">
-          {/* Logo */}
+        <div className="flex justify-between items-center py-4">
           <div className="flex-shrink-0">
             <a href="/" className="flex items-center">
-              <span className={cn(
-                "text-2xl font-bold transition-colors", 
-                scrolled ? "text-indigo-600" : "text-white"
-              )}>
+              <span className="text-2xl font-bold text-indigo-700 dark:text-white">
                 Zenith
               </span>
             </a>
           </div>
-          
-          {/* Desktop Navigation */}
+
           <div className="hidden md:flex md:items-center md:space-x-8">
-            <a href="#features" className={cn(
-              "text-sm font-medium transition-colors hover:text-indigo-500",
-              scrolled ? "text-slate-700" : "text-white"
-            )}>
-              Features
-            </a>
-            <a href="#testimonials" className={cn(
-              "text-sm font-medium transition-colors hover:text-indigo-500",
-              scrolled ? "text-slate-700" : "text-white"
-            )}>
-              Testimonials
-            </a>
-            <a href="#pricing" className={cn(
-              "text-sm font-medium transition-colors hover:text-indigo-500",
-              scrolled ? "text-slate-700" : "text-white"
-            )}>
-              Pricing
-            </a>
-            <a href="#faq" className={cn(
-              "text-sm font-medium transition-colors hover:text-indigo-500",
-              scrolled ? "text-slate-700" : "text-white"
-            )}>
-              FAQ
-            </a>
-            <a href="#contact" className={cn(
-              "text-sm font-medium transition-colors hover:text-indigo-500",
-              scrolled ? "text-slate-700" : "text-white"
-            )}>
-              Contact
-            </a>
-          </div>
-          
-          {/* Login/Signup Buttons */}
-          <div className="hidden md:flex md:items-center md:space-x-3">
-            <a href="/login">
-              <Button 
-                variant="ghost" 
-                size="small"
-                className={cn(
-                  scrolled ? "text-slate-700" : "text-white"
-                )}
+            {['features', 'testimonials', 'pricing', 'faq', 'contact'].map((item) => (
+              <a
+                key={item}
+                href={`#${item}`}
+                className="text-sm font-medium text-slate-800 hover:text-indigo-600 transition-colors"
               >
-                Login
-              </Button>
-            </a>
-            <a href="/signup">
-              <Button variant="primary" size="small">
-                Sign up
-              </Button>
-            </a>
+                {item.charAt(0).toUpperCase() + item.slice(1)}
+              </a>
+            ))}
           </div>
-          
-          {/* Mobile menu button */}
+
+          <div className="hidden md:flex md:items-center md:space-x-3">
+            {user ? (
+              <>
+                <span className="text-sm font-medium text-slate-800 dark:text-white">
+                  Welcome, {user.fullName}
+                </span>
+                <Button variant="ghost" size="small" onClick={handleLogout}>
+                  Logout
+                </Button>
+              </>
+            ) : (
+              <>
+                <a href="/login">
+                  <Button variant="ghost" size="small" className="text-slate-800">
+                    Login
+                  </Button>
+                </a>
+                <a href="/signup">
+                  <Button variant="primary" size="small">
+                    Sign up
+                  </Button>
+                </a>
+              </>
+            )}
+          </div>
+
           <div className="md:hidden flex items-center">
             <button
               type="button"
-              className={cn(
-                "inline-flex items-center justify-center p-2 rounded-md focus:outline-none",
-                scrolled ? "text-slate-700 hover:text-slate-900" : "text-white hover:text-gray-200"
-              )}
+              className="inline-flex items-center justify-center p-2 rounded-md text-slate-800 hover:text-indigo-600 focus:outline-none"
               onClick={toggleMobileMenu}
             >
               <span className="sr-only">Open main menu</span>
@@ -129,52 +108,38 @@ const Navbar = ({ className }) => {
 
       {/* Mobile menu */}
       <div className={`md:hidden ${mobileMenuOpen ? 'block' : 'hidden'}`}>
-        <div className="px-2 pt-2 pb-3 space-y-1 sm:px-3 bg-white shadow-lg rounded-b-lg">
-          <a
-            href="#features"
-            className="block px-3 py-2 rounded-md text-base font-medium text-slate-700 hover:text-indigo-600 hover:bg-slate-50"
-          >
-            Features
-          </a>
-          <a
-            href="#testimonials"
-            className="block px-3 py-2 rounded-md text-base font-medium text-slate-700 hover:text-indigo-600 hover:bg-slate-50"
-          >
-            Testimonials
-          </a>
-          <a
-            href="#pricing"
-            className="block px-3 py-2 rounded-md text-base font-medium text-slate-700 hover:text-indigo-600 hover:bg-slate-50"
-          >
-            Pricing
-          </a>
-          <a
-            href="#faq"
-            className="block px-3 py-2 rounded-md text-base font-medium text-slate-700 hover:text-indigo-600 hover:bg-slate-50"
-          >
-            FAQ
-          </a>
-          <a
-            href="#contact"
-            className="block px-3 py-2 rounded-md text-base font-medium text-slate-700 hover:text-indigo-600 hover:bg-slate-50"
-          >
-            Contact
-          </a>
-          <div className="pt-4 pb-3 border-t border-slate-200">
-            <div className="flex items-center px-5">
-              <a href="/login" className="block w-full">
-                <Button variant="ghost" className="w-full mb-2">
-                  Login
+        <div className="px-4 pt-4 pb-3 bg-white/80 backdrop-blur-md border-t border-slate-200 shadow-md">
+          {['features', 'testimonials', 'pricing', 'faq', 'contact'].map((item) => (
+            <a
+              key={item}
+              href={`#${item}`}
+              className="block px-3 py-2 rounded-md text-base font-medium text-slate-800 hover:text-indigo-600 hover:bg-slate-100"
+            >
+              {item.charAt(0).toUpperCase() + item.slice(1)}
+            </a>
+          ))}
+          <div className="mt-4 border-t border-slate-300 pt-4">
+            {user ? (
+              <>
+                <p className="px-3 text-slate-800 mb-2">Welcome, {user.fullName}</p>
+                <Button variant="ghost" className="w-full mb-2" onClick={handleLogout}>
+                  Logout
                 </Button>
-              </a>
-            </div>
-            <div className="flex items-center px-5">
-              <a href="/signup" className="block w-full">
-                <Button variant="primary" className="w-full">
-                  Sign up
-                </Button>
-              </a>
-            </div>
+              </>
+            ) : (
+              <>
+                <a href="/login" className="block w-full mb-2">
+                  <Button variant="ghost" className="w-full">
+                    Login
+                  </Button>
+                </a>
+                <a href="/signup" className="block w-full">
+                  <Button variant="primary" className="w-full">
+                    Sign up
+                  </Button>
+                </a>
+              </>
+            )}
           </div>
         </div>
       </div>
