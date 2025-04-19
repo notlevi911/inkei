@@ -5,54 +5,63 @@ const ApiEndpoints = () => {
   const endpoints = [
     {
       id: 1,
-      method: 'GET',
-      endpoint: '/api/v1/repositories',
-      description: 'Retrieve a list of all repositories',
-      parameters: [],
-      responseExample: '{ "repositories": [ ... ] }'
+      method: 'POST',
+      endpoint: '/api/auth/signup',
+      description: 'Register a new user account',
+      parameters: [
+        { name: 'fullName', type: 'string', required: true, description: 'User\'s full name' },
+        { name: 'email', type: 'string', required: true, description: 'User\'s email address' },
+        { name: 'password', type: 'string', required: true, description: 'User\'s password' },
+        { name: 'role', type: 'string', required: true, description: 'User role (CEO, Senior Manager, Product Manager)' }
+      ],
+      responseExample: '{\n  "message": "User created successfully!"\n}'
     },
     {
       id: 2,
       method: 'POST',
-      endpoint: '/api/v1/repositories/scan',
-      description: 'Scan a GitHub repository and analyze its content',
+      endpoint: '/api/auth/login',
+      description: 'Authenticate user and get access token',
       parameters: [
-        { name: 'url', type: 'string', required: true, description: 'GitHub repository URL' },
-        { name: 'branch', type: 'string', required: false, description: 'Repository branch (default: main)' }
+        { name: 'email', type: 'string', required: true, description: 'User\'s email address' },
+        { name: 'password', type: 'string', required: true, description: 'User\'s password' },
+        { name: 'role', type: 'string', required: true, description: 'User role (CEO, Senior Manager, Product Manager)' }
       ],
-      responseExample: '{ "scan_id": "abc123", "status": "in_progress" }'
+      responseExample: '{\n  "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",\n  "user": {\n    "id": "65ff245a8b1c234d5e6f78a9",\n    "fullName": "John Doe",\n    "email": "john@example.com",\n    "role": "CEO"\n  }\n}'
     },
     {
       id: 3,
-      method: 'GET',
-      endpoint: '/api/v1/scan/:id',
-      description: 'Get the status and results of a repository scan',
+      method: 'Socket',
+      endpoint: 'joinRoom',
+      description: 'Join a chat room (Socket.IO event)',
       parameters: [
-        { name: 'id', type: 'string', required: true, description: 'Scan ID' }
+        { name: 'roomId', type: 'string', required: true, description: 'ID of the room to join' },
+        { name: 'user', type: 'string', required: true, description: 'Username of the joining user' },
+        { name: 'role', type: 'string', required: true, description: 'User role (CEO, Senior Manager, Product Manager)' }
       ],
-      responseExample: '{ "scan_id": "abc123", "status": "completed", "results": { ... } }'
+      responseExample: '// Event: chatHistory\n[\n  { "user": "Jane", "message": "Hello everyone", "timestamp": "2025-04-18T14:30:00Z" },\n  { "user": "John", "message": "Hi Jane!", "timestamp": "2025-04-18T14:31:00Z" }\n]'
     },
     {
       id: 4,
-      method: 'POST',
-      endpoint: '/api/v1/documents/upload',
-      description: 'Upload documentation files for AI processing',
+      method: 'Socket',
+      endpoint: 'sendMessage',
+      description: 'Send a message to a chat room (Socket.IO event)',
       parameters: [
-        { name: 'files', type: 'array', required: true, description: 'Array of files to upload' }
+        { name: 'roomId', type: 'string', required: true, description: 'ID of the target room' },
+        { name: 'user', type: 'string', required: true, description: 'Username of the message sender' },
+        { name: 'message', type: 'string', required: true, description: 'Message content' }
       ],
-      responseExample: '{ "upload_id": "def456", "status": "success", "files_processed": 3 }'
+      responseExample: '// Event: receiveMessage\n{\n  "user": "John",\n  "message": "Hello everyone!",\n  "timestamp": "2025-04-20T10:15:30Z"\n}'
     },
     {
       id: 5,
-      method: 'POST',
-      endpoint: '/api/v1/sprint/generate',
-      description: 'Generate a sprint plan based on repository analysis',
+      method: 'Socket',
+      endpoint: 'leaveRoom',
+      description: 'Leave a chat room (Socket.IO event)',
       parameters: [
-        { name: 'repository_id', type: 'string', required: true, description: 'Repository ID' },
-        { name: 'duration', type: 'integer', required: true, description: 'Sprint duration in days' },
-        { name: 'team_size', type: 'integer', required: true, description: 'Number of team members' }
+        { name: 'roomId', type: 'string', required: true, description: 'ID of the room to leave' },
+        { name: 'user', type: 'string', required: true, description: 'Username of the leaving user' }
       ],
-      responseExample: '{ "sprint_id": "ghi789", "tasks": [ ... ], "estimated_completion": "2023-12-31" }'
+      responseExample: '// Event: notification\n"John left general"'
     }
   ];
 
@@ -66,6 +75,8 @@ const ApiEndpoints = () => {
         return 'bg-yellow-100 text-yellow-800';
       case 'DELETE':
         return 'bg-red-100 text-red-800';
+      case 'Socket':
+        return 'bg-purple-100 text-purple-800';
       default:
         return 'bg-gray-100 text-gray-800';
     }
@@ -132,6 +143,35 @@ const ApiEndpoints = () => {
           </CardContent>
         </Card>
       ))}
+
+      <Card className="border border-slate-200 bg-blue-50">
+        <CardContent className="p-6">
+          <h3 className="text-lg font-medium text-slate-900 mb-4">Authentication Note</h3>
+          <p className="text-slate-700 mb-3">
+            JWT Authentication is used for protected routes. After login, include the token in the Authorization header:
+          </p>
+          <pre className="bg-slate-800 text-slate-200 p-3 rounded-md overflow-x-auto text-xs font-mono">
+            Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+          </pre>
+          
+          <h3 className="text-lg font-medium text-slate-900 mt-6 mb-4">Socket.IO Connection</h3>
+          <p className="text-slate-700 mb-3">
+            To connect to the Socket.IO server for real-time communication:
+          </p>
+          <pre className="bg-slate-800 text-slate-200 p-3 rounded-md overflow-x-auto text-xs font-mono">
+            {`import io from 'socket.io-client';
+const socket = io('http://localhost:5000');
+
+// Listen for events
+socket.on('receiveMessage', (message) => {
+  console.log('New message:', message);
+});
+
+// Emit events
+socket.emit('joinRoom', { roomId: 'general', user: 'John', role: 'CEO' });`}
+          </pre>
+        </CardContent>
+      </Card>
     </div>
   );
 };
