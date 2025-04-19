@@ -5,6 +5,7 @@ import Button from './button';
 const Navbar = ({ className }) => {
   const [scrolled, setScrolled] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [user, setUser] = useState(null); // Track the logged-in user
 
   useEffect(() => {
     const handleScroll = () => {
@@ -20,17 +21,30 @@ const Navbar = ({ className }) => {
     };
   }, [scrolled]);
 
+  // Check if a user is logged in (this could be from localStorage or your authentication context)
+  useEffect(() => {
+    const storedUser = localStorage.getItem('user'); // Example, replace with your actual logic
+    if (storedUser) {
+      setUser(JSON.parse(storedUser)); // If user info exists in localStorage, set it
+    }
+  }, []);
+
   const toggleMobileMenu = () => {
     setMobileMenuOpen(!mobileMenuOpen);
+  };
+
+  const handleLogout = () => {
+    localStorage.removeItem('user'); // Clear user from localStorage (or your session management)
+    setUser(null); // Reset the user state
   };
 
   return (
     <nav
       className={cn(
-        "fixed top-0 left-0 right-0 z-50 transition-all duration-300",
-        scrolled 
-          ? "bg-white/90 backdrop-blur-md py-3 shadow-lg" 
-          : "bg-transparent py-5",
+        'fixed top-0 left-0 right-0 z-50 transition-all duration-300',
+        scrolled
+          ? 'bg-white/90 backdrop-blur-md py-3 shadow-lg'
+          : 'bg-transparent py-5',
         className
       )}
     >
@@ -39,87 +53,132 @@ const Navbar = ({ className }) => {
           {/* Logo */}
           <div className="flex-shrink-0">
             <a href="/" className="flex items-center">
-              <span className={cn(
-                "text-2xl font-bold transition-colors", 
-                scrolled ? "text-indigo-600" : "text-white"
-              )}>
+              <span
+                className={cn(
+                  'text-2xl font-bold transition-colors',
+                  scrolled ? 'text-indigo-600' : 'text-white'
+                )}
+              >
                 Zenith
               </span>
             </a>
           </div>
-          
+
           {/* Desktop Navigation */}
           <div className="hidden md:flex md:items-center md:space-x-8">
-            <a href="#features" className={cn(
-              "text-sm font-medium transition-colors hover:text-indigo-500",
-              scrolled ? "text-slate-700" : "text-white"
-            )}>
+            <a
+              href="#features"
+              className={cn(
+                'text-sm font-medium transition-colors hover:text-indigo-500',
+                scrolled ? 'text-slate-700' : 'text-white'
+              )}
+            >
               Features
             </a>
-            <a href="#testimonials" className={cn(
-              "text-sm font-medium transition-colors hover:text-indigo-500",
-              scrolled ? "text-slate-700" : "text-white"
-            )}>
+            <a
+              href="#testimonials"
+              className={cn(
+                'text-sm font-medium transition-colors hover:text-indigo-500',
+                scrolled ? 'text-slate-700' : 'text-white'
+              )}
+            >
               Testimonials
             </a>
-            <a href="#pricing" className={cn(
-              "text-sm font-medium transition-colors hover:text-indigo-500",
-              scrolled ? "text-slate-700" : "text-white"
-            )}>
+            <a
+              href="#pricing"
+              className={cn(
+                'text-sm font-medium transition-colors hover:text-indigo-500',
+                scrolled ? 'text-slate-700' : 'text-white'
+              )}
+            >
               Pricing
             </a>
-            <a href="#faq" className={cn(
-              "text-sm font-medium transition-colors hover:text-indigo-500",
-              scrolled ? "text-slate-700" : "text-white"
-            )}>
+            <a
+              href="#faq"
+              className={cn(
+                'text-sm font-medium transition-colors hover:text-indigo-500',
+                scrolled ? 'text-slate-700' : 'text-white'
+              )}
+            >
               FAQ
             </a>
-            <a href="#contact" className={cn(
-              "text-sm font-medium transition-colors hover:text-indigo-500",
-              scrolled ? "text-slate-700" : "text-white"
-            )}>
+            <a
+              href="#contact"
+              className={cn(
+                'text-sm font-medium transition-colors hover:text-indigo-500',
+                scrolled ? 'text-slate-700' : 'text-white'
+              )}
+            >
               Contact
             </a>
           </div>
-          
-          {/* Login/Signup Buttons */}
+
+          {/* Login/Signup Buttons or Welcome Message */}
           <div className="hidden md:flex md:items-center md:space-x-3">
-            <a href="/login">
-              <Button 
-                variant="ghost" 
-                size="small"
-                className={cn(
-                  scrolled ? "text-slate-700" : "text-white"
-                )}
-              >
-                Login
-              </Button>
-            </a>
-            <a href="/signup">
-              <Button variant="primary" size="small">
-                Sign up
-              </Button>
-            </a>
+            {user ? (
+              <>
+                <span
+                  className={cn(
+                    'text-sm font-medium text-white', 
+                    scrolled ? 'text-slate-700' : 'text-white'
+                  )}
+                >
+                  Welcome, {user.fullName}
+                </span>
+                <Button variant="ghost" size="small" onClick={handleLogout}>
+                  Logout
+                </Button>
+              </>
+            ) : (
+              <>
+                <a href="/login">
+                  <Button
+                    variant="ghost"
+                    size="small"
+                    className={cn(scrolled ? 'text-slate-700' : 'text-white')}
+                  >
+                    Login
+                  </Button>
+                </a>
+                <a href="/signup">
+                  <Button variant="primary" size="small">
+                    Sign up
+                  </Button>
+                </a>
+              </>
+            )}
           </div>
-          
+
           {/* Mobile menu button */}
           <div className="md:hidden flex items-center">
             <button
               type="button"
               className={cn(
-                "inline-flex items-center justify-center p-2 rounded-md focus:outline-none",
-                scrolled ? "text-slate-700 hover:text-slate-900" : "text-white hover:text-gray-200"
+                'inline-flex items-center justify-center p-2 rounded-md focus:outline-none',
+                scrolled
+                  ? 'text-slate-700 hover:text-slate-900'
+                  : 'text-white hover:text-gray-200'
               )}
               onClick={toggleMobileMenu}
             >
               <span className="sr-only">Open main menu</span>
               {mobileMenuOpen ? (
                 <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M6 18L18 6M6 6l12 12"
+                  />
                 </svg>
               ) : (
                 <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M4 6h16M4 12h16M4 18h16"
+                  />
                 </svg>
               )}
             </button>
