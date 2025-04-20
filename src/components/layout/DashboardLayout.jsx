@@ -5,7 +5,7 @@ import { BackgroundBeams } from '../ui/background-beams';
 
 const DashboardLayout = ({ children, title, description }) => {
   return (
-    <div className="min-h-screen bg-white flex flex-col">
+    <div className="min-h-screen bg-grey flex flex-col">
       <Header />
 
       <div className="pt-20">
