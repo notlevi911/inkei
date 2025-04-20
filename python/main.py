@@ -1,11 +1,16 @@
-import argparse
-import requests  # used for fetching content from URLs (e.g., GitHub)
+from flask import Flask, request, jsonify
+import requests
 import os
+import base64
+from io import BytesIO
+
 try:
     import pytesseract  # for OCR on images
     from PIL import Image
 except ImportError:
     pytesseract = None  # handle case where OCR tools are not installed
+
+app = Flask(__name__)
 
 def parse_input_files(inputs):
     """
@@ -16,55 +21,47 @@ def parse_input_files(inputs):
     combined_text = ""
     for item in inputs:
         content = ""
-        if item.startswith("http://") or item.startswith("https://"):
+        if isinstance(item, dict) and 'url' in item:
             # Handle URLs
+            content = fetch_content_from_url(item['url'])
+        elif isinstance(item, dict) and 'filename' in item and 'content' in item:
+            # Handle file uploads
+            file_data = base64.b64decode(item['content'])
+            ext = os.path.splitext(item['filename'])[1].lower()
+            if ext in [".md", ".markdown", ".txt"]:
+                content = file_data.decode('utf-8')
+            elif ext in [".png", ".jpg", ".jpeg"]:
+                content = ocr_image_from_bytes(file_data)
+            else:
+                print(f"Note: Skipping unsupported file type {item['filename']}")
+                continue
+        elif isinstance(item, str) and (item.startswith("http://") or item.startswith("https://")):
+            # Handle plain URL strings
             content = fetch_content_from_url(item)
         else:
-            # Handle local file paths
-            if not os.path.exists(item):
-                print(f"Warning: File not found -> {item}")
-                continue
-            if os.path.isdir(item):
-                print(f"Warning: {item} is a directory, skipping.")
-                continue
-            ext = os.path.splitext(item)[1].lower()
-            if ext in [".md", ".markdown", ".txt"]:
-                content = read_text_file(item)
-            elif ext in [".png", ".jpg", ".jpeg"]:
-                content = ocr_image(item)
-            else:
-                # Unsupported file type for now
-                print(f"Note: Skipping unsupported file type {item}")
-                continue
+            print(f"Warning: Invalid input format: {item}")
+            continue
+            
         if content:
-            # Separate contents of different files for clarity
-            combined_text += f"\n\n--- Content from {item} ---\n{content}"
+            if isinstance(item, dict) and 'filename' in item:
+                source = item['filename']
+            elif isinstance(item, dict) and 'url' in item:
+                source = item['url']
+            else:
+                source = item
+            combined_text += f"\n\n--- Content from {source} ---\n{content}"
     return combined_text.strip()
 
-def read_text_file(path):
-    """Read plain text or markdown file and return its content as text."""
-    try:
-        with open(path, 'r', encoding='utf-8') as f:
-            text = f.read()
-            # Basic normalization: if markdown, we might remove certain formatting
-            # Here we simply return raw text; could integrate markdown-to-text if needed.
-            return text
-    except Exception as e:
-        print(f"Error reading file {path}: {e}")
-        return ""
-
-def ocr_image(path):
-    """Extract text from an image file using OCR (pytesseract)."""
+def ocr_image_from_bytes(image_bytes):
+    """Extract text from image bytes using OCR (pytesseract)."""
     if pytesseract is None:
-        print("OCR support not available (pytesseract not installed). Skipping image:", path)
-        return ""
+        return "OCR support not available (pytesseract not installed)."
     try:
-        img = Image.open(path)
+        img = Image.open(BytesIO(image_bytes))
         text = pytesseract.image_to_string(img)
-        # Basic cleanup of OCR output
         return text.strip()
     except Exception as e:
-        print(f"Error during OCR for image {path}: {e}")
+        print(f"Error during OCR: {e}")
         return ""
 
 def fetch_content_from_url(url):
@@ -92,8 +89,7 @@ def fetch_content_from_url(url):
                 # Not a straightforward repo main page or README not found, try direct fetch
                 resp = requests.get(url)
                 if resp.status_code != 200:
-                    print(f"Warning: Failed to fetch URL {url} (status {resp.status_code})")
-                    return ""
+                    return f"Failed to fetch URL {url} (status {resp.status_code})"
                 return resp.text
             else:
                 # Fetch the raw README content
@@ -101,20 +97,16 @@ def fetch_content_from_url(url):
                 if resp.status_code == 200:
                     return resp.text
                 else:
-                    print(f"Warning: Failed to fetch README from {raw_url}")
-                    return ""
+                    return f"Failed to fetch README from {raw_url}"
         else:
             # Generic URL (could be raw text or other)
             resp = requests.get(url)
             if resp.status_code == 200:
-                # If it's an image URL, we could download and OCR, but not implemented for remote images.
                 return resp.text
             else:
-                print(f"Warning: Failed to fetch URL {url} (status {resp.status_code})")
-                return ""
+                return f"Failed to fetch URL {url} (status {resp.status_code})"
     except Exception as e:
-        print(f"Error fetching URL {url}: {e}")
-        return ""
+        return f"Error fetching URL {url}: {e}"
 
 def detect_tech_stack_locally(text):
     """
@@ -172,7 +164,6 @@ def breakdown_features_into_subtasks(feature_list):
         subtasks_plan[feature] = subtasks
     return subtasks_plan
 
-# Placeholder for Gemini API calls
 def call_gemini_for_features(text):
     """Simulate calling Gemini API to extract feature ideas from text."""
     # In a real implementation, we would send 'text' with a prompt to Gemini.
@@ -191,71 +182,72 @@ def call_gemini_for_features(text):
         features = [text.strip()[:60] + "..."]  # first 60 chars as a summary
     return features
 
-def main():
-    parser = argparse.ArgumentParser(description="Product Manager AI (Gemini-powered) CLI")
-    parser.add_argument('inputs', nargs='+', help="Paths or URLs to feature description files (markdown, text, images, or GitHub repo URL).")
-    args = parser.parse_args()
+@app.route('/analyze', methods=['POST'])
+def analyze():
+    """
+    API endpoint to analyze product features from provided content.
+    Accepts JSON body with 'inputs' key.
+    """
+    data = request.get_json()
+    
+    if not data or 'inputs' not in data:
+        return jsonify({"error": "No inputs provided"}), 400
+    
+    inputs = data['inputs']
+    if not isinstance(inputs, list):
+        return jsonify({"error": "Inputs must be an array"}), 400
+    
     # Parse and aggregate content from inputs
-    combined_text = parse_input_files(args.inputs)
+    combined_text = parse_input_files(inputs)
     if not combined_text:
-        print("No content to analyze. Please provide valid input files or URLs.")
-        return
+        return jsonify({"error": "No content to analyze"}), 400
 
     # Step 1: Extract feature ideas and requirements
-    # (Using Gemini API placeholder)
     features = call_gemini_for_features(combined_text)
-    # Ensure unique and non-empty features list
     features = [f for f in features if f]
-    if not features:
-        features = []  # no features found (empty list)
 
     # Step 2: Detect mentioned or implied tech stack
-    # (Using Gemini or simple keyword detection)
     detected_stack = detect_tech_stack_locally(combined_text)
-    # We could also call an AI to infer tech stack; for now we use the detected keywords.
-    tech_stack_list = sorted(detected_stack)  # sort for consistent order
+    tech_stack_list = sorted(detected_stack)
 
     # Step 3: Evaluate tech stack suitability for scalability
     is_suitable, suggestions = evaluate_tech_stack(tech_stack_list)
 
     # Step 4: Break each feature into subtasks (Agile/Scrum style)
     subtasks_plan = breakdown_features_into_subtasks(features)
-    # (In real use, Gemini would be called to generate subtasks and points.)
 
-    # Step 5: Assign story points to each subtask (already done in breakdown in this placeholder)
+    # Format subtasks for JSON response
+    formatted_subtasks = {}
+    for feat, subtasks in subtasks_plan.items():
+        formatted_subtasks[feat] = []
+        for (task, points, reason) in subtasks:
+            formatted_subtasks[feat].append({
+                "task": task,
+                "story_points": points,
+                "reason": reason
+            })
 
-    # Output the results in structured format
-    print("\n=== Extracted Features ===")
-    if features:
-        for feat in features:
-            print(f"- {feat}")
-    else:
-        print("(No distinct features identified)")
+    # Return structured JSON response
+    return jsonify({
+        "features": features,
+        "tech_stack": tech_stack_list,
+        "is_tech_suitable": is_suitable,
+        "suggestions": suggestions,
+        "subtasks": formatted_subtasks
+    })
 
-    print("\n=== Detected Tech Stack ===")
-    if tech_stack_list:
-        print(", ".join(tech_stack_list))
-    else:
-        print("(No specific technology stack detected)")
+@app.route('/health', methods=['GET'])
+def health():
+    """Health check endpoint"""
+    return jsonify({"status": "healthy"}), 200
 
-    if not is_suitable:
-        print("\n=== Suggested Alternatives ===")
-        for suggestion in suggestions:
-            print(f"- {suggestion}")
-    # If the tech stack is suitable or no tech info, this section can be skipped or a note can be given
-    elif tech_stack_list:
-        print("\n=== Suggested Alternatives ===")
-        print("Current tech stack is appropriate for scalability and robustness.")
+@app.errorhandler(404)
+def not_found(error):
+    return jsonify({"error": "Not found"}), 404
 
-    print("\n=== Subtasks with Story Points ===")
-    if subtasks_plan:
-        for feat, subtasks in subtasks_plan.items():
-            print(f"\nFeature: {feat}")
-            for (task, points, reason) in subtasks:
-                print(f"  - {task} -> **{points} points**")
-                print(f"    Reason: {reason}")
-    else:
-        print("(No subtasks generated)")
-    
-if __name__ == "__main__":
-    main()
+@app.errorhandler(500)
+def server_error(error):
+    return jsonify({"error": "Internal server error"}), 500
+
+if __name__ == '__main__':
+    app.run(debug=True, host='0.0.0.0', port=5000)
