@@ -1,0 +1,3 @@
+[submodule "inkei-gh-bot"]
+	path = inkei-gh-bot
+	url = git@github.com:MashyBasker/inkei-gh-bot.git
